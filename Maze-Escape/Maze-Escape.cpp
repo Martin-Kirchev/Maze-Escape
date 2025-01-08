@@ -9,33 +9,40 @@
 
 using namespace std;
 
-boolean createPlayerFile(string name) {
+boolean playerExist(string name) {
 
-	fstream playerFile("D:\\Workspace\\Maze-Escape\\Maze-Escape\\Players\\" + name);
+	string directory = "D:\\Workspace\\Maze-Escape\\Maze-Escape\\Players\\" + name + ".txt";
 
-	if (playerFile.is_open()) {
+	fstream playerFile(directory);
 
-		cout << "Player \"" <<  name  << "\" already exists!";
-		return false;
+	return playerFile.is_open();
+}
+
+void createPlayerFile(string name) {
+
+	while (playerExist(name)) {
+
+		cout << "Player \"" <<  name  << "\" already exists!" << endl;
+		cin >> name;
 	}
 
-	//playerFile.open(ios::app);
-
-	//playerFile.close();
+	ofstream playerFile("D:\\Workspace\\Maze-Escape\\Maze-Escape\\Players\\" + name + ".txt");
+	playerFile.close();
 }
 
 void createPlayerData(string name) {
 
-	fstream playerFile("D:\\Workspace\\Maze-Escape\\Maze-Escape\\Players\\" + name, ios::app);
+	fstream playerFile("D:\\Workspace\\Maze-Escape\\Maze-Escape\\Players\\" + name + ".txt", ios::app);
 
-
+	playerFile << "Lives: 0" << endl;
+	playerFile << "Coins: 0" << endl;
+	playerFile << "Maps:" << endl;
 }
 
 void createPlayer(string name) {
 
 	createPlayerFile(name);
-	//createPlayerProfile(name);
-
+	createPlayerData(name);
 }
 
 
