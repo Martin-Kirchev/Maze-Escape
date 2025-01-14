@@ -9,6 +9,13 @@
 
 using namespace std;
 
+
+
+void clearConsole() {
+
+	system("cls");
+}
+
 void printNewLine() {
 
 	cout << endl;
@@ -21,10 +28,34 @@ int getRandomNumber(int max) {
 	return (rand() % max) + 1;
 }
 
+void split(string word, char delimiter, string array[3]) {
+
+	char charArray[20];
+	strcpy_s(charArray, word.c_str());
+
+	int charIterator = 0;
+	int stringIterator = 0;
+
+	while (charArray[charIterator] != '\0') {
+
+		char currentSymbol = charArray[charIterator++];
+
+		if (currentSymbol != delimiter) {
+
+			array[stringIterator] += currentSymbol;
+
+		}
+		else {
+
+			stringIterator++;
+		}
+	}
+}
+
 string toUpper(string word) {
 
 	string upperWord;
-	char symbols[10];
+	char symbols[20];
 
 	strcpy_s(symbols, word.c_str());
 
@@ -66,6 +97,7 @@ void createPlayerData(string playerName) {
 
 	playerFile << "Lives: 0" << endl;
 	playerFile << "Coins: 0" << endl;
+	playerFile << "Keys: 0" << endl;
 	playerFile << "Completed Maps:" << endl;
 	playerFile << "Unfinished Map:" << endl;
 }
@@ -97,8 +129,8 @@ void loginPlayer(string playerName) {
 		cout << "Player name \"" << playerName << "\" must have between [1, 50] symbols!" << endl;
 		cin >> playerName;
 	}
-
-	while (playerExist(playerName)) {
+	
+	while (!playerExist(playerName)) {
 
 		cout << "Player \"" << playerName << "\" doesn't exists!" << endl;
 		cin >> playerName;
@@ -229,7 +261,10 @@ void printListOfMaps(string* mapListPointer) {
 
 	while (*mapListPointer != "") {
 
-		cout << iterator++ << ". " << *mapListPointer << endl;
+		string array[3];
+		split(*mapListPointer, '-', array);
+
+		cout << iterator++ << ". " << array[0] << endl;
 		mapListPointer++;
 	}
 }
@@ -301,7 +336,7 @@ string levelSelector(string playerName) {
 
 	string command;
 
-	cout << "Would you like to continue or play a previous map?" << endl;;
+	cout << "Would you like to continue or select a previous map?" << endl;;
 	cout << "Continue/Select" << endl;;
 	cin >> command;
 	command = toUpper(command);
@@ -331,20 +366,37 @@ int main()
 {
 
 	string playerName = startPlayerSystem();
+	clearConsole();
+
 	string mapName = levelSelector(playerName);
+	clearConsole();
 
 	const int row = 20;
 	const int col = 20;
-
 	char maze[row][col];
 
 	string difficulty;
-	int randomNumber = getRandomNumber(6);
+	int mapNumber;
 	string size;
 
-	cin >> difficulty >> size;
+	if (mapName == "EMPTY_LIST") {
 
-	createMap(difficulty, randomNumber, size, maze);
+		difficulty = "normal";
+		mapNumber = getRandomNumber(6);
+		size = "12x15";
+	}
+	else {
+
+		string mapComponents[3];
+		split(mapName, '-', mapComponents);
+
+		difficulty = mapComponents[0];
+		mapNumber = stoi(mapComponents[1]);
+		size = mapComponents[2];
+	}
+
+
+	createMap(difficulty, mapNumber, size, maze);
 	printMaze(12, 15, maze);
 
 
