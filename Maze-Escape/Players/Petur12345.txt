@@ -1,3 +1,0 @@
-Lives: 0
-Coins: 0
-Maps:

@@ -1,0 +1,8 @@
+Lives: 0
+Coins: 0
+Completed Maps:
+normal-1-12x15
+normal-5-12x15
+Unfinished Map:
+normal-6-12x15
+
