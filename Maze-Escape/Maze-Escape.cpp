@@ -10,6 +10,8 @@
 using namespace std;
 
 
+const unsigned int slow_seconds = 2;
+
 
 void delay(unsigned int sec) {
 
@@ -150,29 +152,32 @@ void loginPlayer(string playerName) {
 	cout << "Login successful!" << endl;
 }
 
-void printPlayerStats(string playerName) {
+void printMapStatus(unsigned int iterator, string difficulty) {
 
-	fstream playerFile("D:\\Workspace\\Maze-Escape\\Maze-Escape\\Players\\" + playerName + ".txt", ios::in);
-	string line;
-
-	while (getline(playerFile, line)) {
-
-		if (line == "Completed Maps:") {
-
-			return;
-		}
-
-		cout << line << endl;
-	}
+	cout << "Level: " << iterator << endl;
+	cout << "Difficulty: " << difficulty << endl;
 }
 
+void printPlayerStats(unsigned int lives, unsigned int coins, unsigned int keys) {
 
-void printMaze(unsigned int rows, unsigned int columns, char maze[20][20]) {
+	cout << "Lives: " << lives << endl;
+	cout << "Coins: " << coins << endl;
+	cout << "Keys: " << ((keys == 0) ? "Not Found" : to_string(keys)) << endl;
+}
 
-	for (size_t row = 0; row < rows; row++)
+void printMaze(unsigned int playerRow, unsigned int playerColumn, unsigned int mapRows, unsigned int mapColumns, char maze[20][20]) {
+
+	for (size_t row = 0; row < mapRows; row++)
 	{
-		for (size_t colm = 0; colm < columns; colm++)
+		for (size_t colm = 0; colm < mapColumns; colm++)
 		{
+
+			if (row == playerRow && colm == playerColumn) {
+
+				cout << "!";
+				continue;
+			}
+
 			cout << maze[row][colm];
 		}
 
@@ -276,7 +281,7 @@ string startPlayerSystem() {
 		registerPlayer(playerName);
 	}
 
-	delay(5);
+	delay(slow_seconds);
 	return playerName;
 }
 
@@ -391,20 +396,29 @@ string selectLevel(string playerName) {
 		mapName = getComplietedMaps(playerMapsPointer);
 	}
 
+	if (*playerMapsPointer == "") {
+
+		cout << "NO_MAPS_FOUND";
+		return "EMPTY_LIST";
+	}
+
 	printNewLine();
 	cout << "Maze loading successful!" << endl;
 
-	delay(5);
+	delay(slow_seconds);
 	return mapName;
 }
 
-void loadMapInfo(string mapName, string& difficulty, unsigned int& mapNumber, string& size) {
+void loadMapInfo(string& mapName, string& difficulty, unsigned int& mapNumber, string& size) {
 
 	if (mapName == "EMPTY_LIST") {
 
 		difficulty = "normal";
 		mapNumber = getRandomNumber(6);
 		size = "12x15";
+
+		string delimiter = "-";
+		mapName = difficulty + delimiter + to_string(mapNumber) + delimiter + size;
 	}
 	else {
 
@@ -414,9 +428,12 @@ void loadMapInfo(string mapName, string& difficulty, unsigned int& mapNumber, st
 		difficulty = mapComponents[0];
 		mapNumber = stoi(mapComponents[1]);
 		size = mapComponents[2];
-
-		delete mapComponents;
 	}
+}
+
+void clearSymbol(unsigned int row, unsigned int col, char maze[20][20]) {
+
+	maze[row][col] = ' ';
 }
 
 string findPlayer(unsigned int rows, unsigned int columns, char maze[20][20]) {
@@ -427,10 +444,13 @@ string findPlayer(unsigned int rows, unsigned int columns, char maze[20][20]) {
 		{
 			if (maze[row][colm] == '@') {
 
-				return (row + "x" + colm);
+				clearSymbol(row, colm, maze);
+
+				return to_string(row) + "x" + to_string(colm);
 			}
 		}
 	}
+
 }
 
 boolean playerComandValidator(string command) {
@@ -438,149 +458,221 @@ boolean playerComandValidator(string command) {
 	return (command == "W") || (command == "A") || (command == "S") || (command == "D") || (command == "ESC");
 }
 
-boolean playerMovementdValidator(unsigned int playerRow, unsigned int playerCol, unsigned int mapRow, unsigned int mapCol) {
+boolean playerMovementValidator(unsigned int playerRow, unsigned int playerCol, unsigned int mapRow, unsigned int mapCol) {
 
 	return (playerRow >= 0 && playerRow < mapRow) && (playerCol >= 0 && playerCol < mapCol);
 }
 
-void teleportPlayer(unsigned int playerRow, unsigned int playerCol, unsigned int mapRow, unsigned int mapCol, char maze[20][20]) {
+void teleportPlayer(unsigned int& playerRow, unsigned int& playerCol, unsigned int mapRow, unsigned int mapCol, char maze[20][20]) {
 
-	boolean getFirstTeleport = false;
+	int row = playerRow;
+	int col = playerCol + 1;
 
-	for (size_t i1 = 0; i1 < mapRow; i1++)
-	{
-		for (size_t i2 = 0; i2 < mapCol; i2++)
-		{
+	while (true) {
 
-			if ((maze[i1][i2] == '%') && (i1 != playerRow) && (i2 != playerCol)) {
+		while (row < mapRow) {
 
-				if (getFirstTeleport || (i1 >= playerRow && i2 >= playerCol)) {
+			while (col < mapCol) {
 
-					playerRow = i1;
-					playerCol = i2;
+				if (maze[row][col] == '%' /*&& row != playerRow && col != playerCol*/) {
+
+					playerRow = row;
+					playerCol = col;
 
 					return;
 				}
+
+				col++;
 			}
 
-			if ((i1 == mapRow - 1) && (i2 == mapCol - 1)) {
-
-				i1 = 0;
-				i2 = 0;
-				getFirstTeleport = true;
-			}
+			row++;
+			col = 0;
 		}
+
+		row = 0;
 	}
 }
 
-void moveUp(unsigned int playerRow) {
+boolean OpenChest(void (*reverseMove)(unsigned int&, unsigned int&), unsigned int& playerRow, unsigned int& playerCol,
+	unsigned int& keys, unsigned int& coins, char maze[20][20]) {
+
+	if (keys > 0) {
+
+		int randomNumber = getRandomNumber(10);
+		keys--;
+		clearSymbol(playerRow, playerCol, maze);
+
+		cout << "Opening chest..." << endl;
+		cout << "+" << randomNumber << " coins" << endl;
+		return true;
+
+	}
+	else {
+
+		reverseMove(playerRow, playerCol);
+
+		cout << "You don't have any keys!" << endl;
+		return false;
+	}
+}
+
+void moveUp(unsigned int& playerRow, unsigned int& playerCol) {
 
 	playerRow--;
 }
 
-void moveLeft(unsigned int playerCol) {
+void moveLeft(unsigned int& playerRow, unsigned int& playerCol) {
 
 	playerCol--;
 }
 
-void moveRight(unsigned int playerCol) {
+void moveRight(unsigned int& playerRow, unsigned int& playerCol) {
 
 	playerCol++;
 }
 
-void moveDown(unsigned int playerRow) {
+void moveDown(unsigned int& playerRow, unsigned int& playerCol) {
 
 	playerRow++;
 }
 
-void movePlayer(string& playerName, unsigned int& playerRow, unsigned int& playerCol, unsigned int& mapRow, unsigned int& mapCol, char maze[20][20]) {
+void goToMenu() {
 
-	unsigned int lives = 0;
-	unsigned int coins = 0;
-	unsigned int keys = 0;
+}
+
+void symbolOperations(unsigned int& lives, unsigned int& coins, unsigned int& keys,
+	void (*reverseMove)(unsigned int&, unsigned int&),
+	unsigned int& playerRow, unsigned int& playerCol,
+	unsigned int& mapRow, unsigned int& mapCol, char maze[20][20]) {
+
+	char currentSymbol = maze[playerRow][playerCol];
+
+	if (currentSymbol == '#') {
+
+		cout << "You can't go through the wall!" << endl;
+		cout << "-1 live" << endl;
+
+		reverseMove(playerRow, playerCol);
+		lives--;
+
+	}
+	else if (currentSymbol == 'X') {
+
+
+
+		OpenChest(reverseMove, playerRow, playerCol, keys, coins, maze);
+
+	}
+	else if (currentSymbol == '%') {
+
+		cout << "Teleporting player..." << endl;
+
+		teleportPlayer(playerRow, playerCol, mapRow, mapCol, maze);
+
+	}
+	else if (currentSymbol == 'C') {
+
+		cout << "You found a coin!" << endl;
+		cout << "+1 coin" << endl;
+
+		clearSymbol(playerRow, playerCol, maze);
+		coins++;
+
+	}
+	else if (currentSymbol == '&') {
+
+		cout << "You found a key!" << endl;
+		cout << "+1 key" << endl;
+
+		clearSymbol(playerRow, playerCol, maze);
+		keys++;
+	}
+	else {
+
+		cout << "Nothing happend!" << endl;
+	}
+
+}
+
+void movePlayer(unsigned int& lives, unsigned int& coins, unsigned int& keys,
+	string& playerName, unsigned int& playerRow, unsigned int& playerCol,
+	unsigned int& mapRow, unsigned int& mapCol, char maze[20][20]) {
+
+	cout << "Type on of the following commands:" << endl;
+	cout << "W/A/S/D/ESC" << endl;
 
 	string command;
 	cin >> command;
 	toUpper(command);
 
-	cout << "W/A/S/D/ESC" << endl;
-
-	while (!playerSystemCommandValidator(command)) {
+	while (!playerComandValidator(command)) {
 
 		cout << "Player command \"" << command << "\" is invalid!" << endl;
 		cin >> command;
 		toUpper(command);
 	}
 
+	printNewLine();
+	cout << "Message: ";
+
 	if (command == "W") {
 
-		if (playerMovementdValidator(playerRow - 1, playerCol, mapRow, mapCol)) {
+		if (playerMovementValidator(playerRow - 1, playerCol, mapRow, mapCol)) {
 
-			char nextMove = maze[playerRow - 1][playerCol];
-
-			if (nextMove == '#') {
-
-				cout << "";
-				lives--;
-				return;
-			}
-
-			if (nextMove == 'X') {
-
-				//tryToOpenChest(playerRow, playerCol);
-				return;
-			}
-
-			moveUp(playerRow);
-
-			if (nextMove == 'C') {
-
-				coins++;
-				cout << "";
-			}
-			else if (nextMove == '&') {
-
-				keys++;
-				cout << "";
-			}
-			else if (nextMove == '%') {
-
-				teleportPlayer(playerRow, playerCol, mapRow, mapCol, maze);
-				cout << "";
-			}
+			moveUp(playerRow, playerCol);
+			symbolOperations(lives, coins, keys, &moveDown, playerRow, playerCol, mapRow, mapCol, maze);
 		}
 	}
 	else if (command == "A") {
 
-		if (playerMovementdValidator(playerRow, playerCol - 1, mapRow, mapCol)) {
+		if (playerMovementValidator(playerRow, playerCol - 1, mapRow, mapCol)) {
 
-
-
-
+			moveLeft(playerRow, playerCol);
+			symbolOperations(lives, coins, keys, &moveRight, playerRow, playerCol, mapRow, mapCol, maze);
 		}
 	}
 	else if (command == "S") {
 
-		if (playerMovementdValidator(playerRow + 1, playerCol, mapRow, mapCol)) {
+		if (playerMovementValidator(playerRow + 1, playerCol, mapRow, mapCol)) {
 
-
+			moveDown(playerRow, playerCol);
+			symbolOperations(lives, coins, keys, &moveUp, playerRow, playerCol, mapRow, mapCol, maze);
 		}
-
 	}
 	else if (command == "D") {
 
-		if (playerMovementdValidator(playerRow, playerCol + 1, mapRow, mapCol)) {
+		if (playerMovementValidator(playerRow, playerCol + 1, mapRow, mapCol)) {
 
-
-
+			moveRight(playerRow, playerCol);
+			symbolOperations(lives, coins, keys, &moveLeft, playerRow, playerCol, mapRow, mapCol, maze);
 		}
 	}
 	else if (command == "ESC") {
 
-		//goToMenu();
-
+		goToMenu();
 	}
 
+}
+
+string checkForGameEnd(unsigned int& lives, unsigned int& mapRows, unsigned int& mapCols, char maze[20][20]) {
+
+	if (lives == 0) {
+
+		return "NO_LIVES";
+	}
+
+	for (size_t row = 0; row < mapRows; row++)
+	{
+		for (size_t colm = 0; colm < mapCols; colm++)
+		{
+			if (maze[row][colm] == 'X') {
+
+				return "CHEST_EXIST";
+			}
+		}
+	}
+
+	return "NO_CHEST_EXIST";
 }
 
 void MazeEscape() {
@@ -596,43 +688,74 @@ void MazeEscape() {
 	const int maxCol = 20;
 	char maze[maxRow][maxCol];
 
-	string mapDifficulty;
-	unsigned int mapNumber;
-	string mapSize;
+	int moves = 0;
 
-	loadMapInfo(mapName, mapDifficulty, mapNumber, mapSize);
-	createMap(mapDifficulty, mapNumber, mapSize, maze);
+	while (true) {
 
-	string cordinates[2];
+		string mapDifficulty;
+		unsigned int mapNumber;
+		string mapSize;
 
-	split(mapSize, 'x', cordinates);
-	unsigned int mapRow = stoi(cordinates[0]);
-	unsigned int mapCol = stoi(cordinates[1]);
+		loadMapInfo(mapName, mapDifficulty, mapNumber, mapSize);
+		createMap(mapDifficulty, mapNumber, mapSize, maze);
 
-	split(findPlayer(mapRow, mapCol, maze), 'x', cordinates);
-	unsigned int playerRow = stoi(cordinates[0]);
-	unsigned int playerCol = stoi(cordinates[1]);
+		string cordinates1[2];
+		string cordinates2[2];
 
-	delete cordinates;
+		split(mapSize, 'x', cordinates1);
+		unsigned int mapRow = stoi(cordinates1[0]);
+		unsigned int mapCol = stoi(cordinates1[1]);
 
-	int i = 1;
+		split(findPlayer(mapRow, mapCol, maze), 'x', cordinates2);
+		unsigned int playerRow = stoi(cordinates2[0]);
+		unsigned int playerCol = stoi(cordinates2[1]);
 
-	while (i--) {
+		int mapIterator = 1;
+		unsigned int lives = 10;
+		unsigned int coins = 0;
+		unsigned int keys = 0;
 
-		printPlayerStats(playerName);
-		printNewLine();
-		printMaze(mapRow, mapCol, maze);
+		while (true) {
 
-		movePlayer(playerName, playerRow, playerCol, mapRow, mapCol, maze);
+			printMapStatus(mapIterator, mapDifficulty);
+			printNewLine();
+			printPlayerStats(lives, coins, keys);
+			printNewLine();
+			printMaze(playerRow, playerCol, mapRow, mapCol, maze);
+			printNewLine();
 
+			movePlayer(lives, coins, keys, playerName, playerRow, playerCol, mapRow, mapCol, maze);
+
+			/*if (checkForGameEnd(lives, mapRow, mapCol, maze) == "CHEST_EXIST") {
+
+				moves++;
+				continue;
+
+			}
+			else*/ 
+			if (checkForGameEnd(lives, mapRow, mapCol, maze) == "NO_CHEST_EXIST") {
+
+				clearConsole();
+				return;
+
+			}
+			else if (checkForGameEnd(lives, mapRow, mapCol, maze) == "NO_LIVES") {
+
+				moves = 0;
+				break;
+			}
+
+			moves++;
+
+			delay(slow_seconds);
+			clearConsole();
+		}
 	}
-
 }
 
 int main()
 {
 
 	MazeEscape();
-
 }
 
