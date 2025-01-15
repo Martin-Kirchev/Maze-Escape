@@ -40,7 +40,9 @@ int getRandomNumber(unsigned int max) {
 	return (rand() % max) + 1;
 }
 
-void split(string word, char delimiter, string array[3]) {
+void split(string word, char delimiter, string array[10]) {
+
+	fill(array, array + 10, "");
 
 	char charArray[20];
 	strcpy_s(charArray, word.c_str());
@@ -106,9 +108,9 @@ void createPlayerData(string playerName) {
 
 	fstream playerFile("D:\\Workspace\\Maze-Escape\\Maze-Escape\\Players\\" + playerName + ".txt", ios::app);
 
-	playerFile << "Lives: 10" << endl;
-	playerFile << "Coins: 0" << endl;
-	playerFile << "Keys: 0" << endl;
+	playerFile << "Lives:10" << endl;
+	playerFile << "Coins:0" << endl;
+	playerFile << "Keys:0" << endl;
 	playerFile << "Completed Maps:" << endl;
 	playerFile << "Unfinished Map:" << endl;
 }
@@ -296,7 +298,7 @@ void printListOfMaps(string* mapListPointer) {
 
 	while (*mapListPointer != "") {
 
-		string array[3];
+		string array[10];
 		split(*mapListPointer, '-', array);
 
 		cout << iterator++ << ". " << array[0] << endl;
@@ -422,7 +424,7 @@ void loadMapInfo(string& mapName, string& difficulty, unsigned int& mapNumber, s
 	}
 	else {
 
-		string mapComponents[3];
+		string mapComponents[10];
 		split(mapName, '-', mapComponents);
 
 		difficulty = mapComponents[0];
@@ -654,6 +656,60 @@ void movePlayer(unsigned int& lives, unsigned int& coins, unsigned int& keys,
 
 }
 
+void readPlayerData(string playerName, vector<string> &playerData) {
+
+	fstream playerFile("D:\\Workspace\\Maze-Escape\\Maze-Escape\\Players\\" + playerName + ".txt", ios::in);
+	string line;
+
+	while (getline(playerFile, line)) {
+
+		playerData.push_back(line);
+	}
+
+	playerFile.close();
+}
+
+void addMapToPlayerData(string mapName, vector<string>& playerData) {
+
+	for (size_t i = 0; i < playerData.size(); i++)
+	{
+
+		string currentData = playerData.at(i);
+
+		if (currentData == "Unfinished Map:") {
+
+			playerData.insert(playerData.begin() + i, mapName);
+		}
+	}
+}
+
+void addDataToPlayerProfile(string playerName, vector<string>& playerData) {
+
+	fstream playerFile("D:\\Workspace\\Maze-Escape\\Maze-Escape\\Players\\" + playerName + ".txt", ios::app);
+
+	for (string line : playerData) {
+
+		playerFile << line << endl;
+	}
+
+	playerFile.close();
+}
+
+void loadPlayerStats(unsigned int& lives, unsigned int& coins, unsigned int& keys, vector<string>& playerData) {
+
+	int iterator = 0;
+	string lineData[10];
+
+	split(playerData.at(iterator++), ':', lineData);
+	lives = stoi(lineData[1]);
+
+	split(playerData.at(iterator++), ':', lineData);
+	coins = stoi(lineData[1]);
+
+	split(playerData.at(iterator++), ':', lineData);
+	keys = stoi(lineData[1]);
+}
+
 string checkForGameEnd(unsigned int& lives, unsigned int& mapRows, unsigned int& mapCols, char maze[20][20]) {
 
 	if (lives == 0) {
@@ -677,78 +733,77 @@ string checkForGameEnd(unsigned int& lives, unsigned int& mapRows, unsigned int&
 
 void MazeEscape() {
 
-	string playerName = startPlayerSystem();
-	clearConsole();
+	int mapIterator = 1;
 
-	string mapName = selectLevel(playerName);
-	clearConsole();
+	boolean mustIterate1 = true;
+	boolean mustIterate2 = true;
+
+	unsigned int lives = 0;
+	unsigned int coins = 0;
+	unsigned int keys = 0;
+
+	while (mustIterate1) {
+
+		string playerName = startPlayerSystem();
+		vector<string> playerData;
+		readPlayerData(playerName, playerData);
+		loadPlayerStats(lives, coins, keys, playerData);
+
+		clearConsole();
+
+		string mapName = selectLevel(playerName);
+		clearConsole();
+
+		const int maxRow = 20;
+		const int maxCol = 20;
+		char maze[maxRow][maxCol];
+
+		while (mustIterate2) {
+
+			string mapDifficulty;
+			unsigned int mapNumber;
+			string mapSize;
+
+			loadMapInfo(mapName, mapDifficulty, mapNumber, mapSize);
+			createMap(mapDifficulty, mapNumber, mapSize, maze);
+
+			string cordinates[10];
+
+			split(mapSize, 'x', cordinates);
+			unsigned int mapRow = stoi(cordinates[0]);
+			unsigned int mapCol = stoi(cordinates[1]);
+
+			split(findPlayer(mapRow, mapCol, maze), 'x', cordinates);
+			unsigned int playerRow = stoi(cordinates[0]);
+			unsigned int playerCol = stoi(cordinates[1]);
+
+			while (true) {
+
+				printMapStatus(mapIterator, mapDifficulty);
+				printNewLine();
+				printPlayerStats(lives, coins, keys);
+				printNewLine();
+				printMaze(playerRow, playerCol, mapRow, mapCol, maze);
+				printNewLine();
+
+				movePlayer(lives, coins, keys, playerName, playerRow, playerCol, mapRow, mapCol, maze);
 
 
-	const int maxRow = 20;
-	const int maxCol = 20;
-	char maze[maxRow][maxCol];
+				if (checkForGameEnd(lives, mapRow, mapCol, maze) == "NO_CHEST_EXIST") {
 
-	int moves = 0;
+					addDataToPlayerProfile(mapName, playerData);
+					mapIterator++;
+					clearConsole();
+					break;
+				}
+				else if (checkForGameEnd(lives, mapRow, mapCol, maze) == "NO_LIVES") {
 
-	while (true) {
+					break;
+				}
 
-		string mapDifficulty;
-		unsigned int mapNumber;
-		string mapSize;
-
-		loadMapInfo(mapName, mapDifficulty, mapNumber, mapSize);
-		createMap(mapDifficulty, mapNumber, mapSize, maze);
-
-		string cordinates1[2];
-		string cordinates2[2];
-
-		split(mapSize, 'x', cordinates1);
-		unsigned int mapRow = stoi(cordinates1[0]);
-		unsigned int mapCol = stoi(cordinates1[1]);
-
-		split(findPlayer(mapRow, mapCol, maze), 'x', cordinates2);
-		unsigned int playerRow = stoi(cordinates2[0]);
-		unsigned int playerCol = stoi(cordinates2[1]);
-
-		int mapIterator = 1;
-		unsigned int lives = 10;
-		unsigned int coins = 0;
-		unsigned int keys = 0;
-
-		while (true) {
-
-			printMapStatus(mapIterator, mapDifficulty);
-			printNewLine();
-			printPlayerStats(lives, coins, keys);
-			printNewLine();
-			printMaze(playerRow, playerCol, mapRow, mapCol, maze);
-			printNewLine();
-
-			movePlayer(lives, coins, keys, playerName, playerRow, playerCol, mapRow, mapCol, maze);
-
-			/*if (checkForGameEnd(lives, mapRow, mapCol, maze) == "CHEST_EXIST") {
-
-				moves++;
-				continue;
-
-			}
-			else*/ 
-			if (checkForGameEnd(lives, mapRow, mapCol, maze) == "NO_CHEST_EXIST") {
-
+				delay(slow_seconds);
 				clearConsole();
-				return;
-
 			}
-			else if (checkForGameEnd(lives, mapRow, mapCol, maze) == "NO_LIVES") {
-
-				moves = 0;
-				break;
-			}
-
-			moves++;
-
-			delay(slow_seconds);
-			clearConsole();
 		}
 	}
 }
