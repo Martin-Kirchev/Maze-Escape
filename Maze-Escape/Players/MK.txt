@@ -1,9 +1,9 @@
-Lives:10
-Coins:500
+Lives:6
+Coins:509
 Keys:430
 Completed Maps:
 normal-3-12x15
 normal-2-12x15
-normal-6-12x15
-Unfinished Map:
 normal-5-12x15
+Unfinished Map:
+normal-4-12x15
