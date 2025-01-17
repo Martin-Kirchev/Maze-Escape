@@ -1038,9 +1038,9 @@ void MazeEscape() {
 
 			boolean mustIterate2 = true;
 
-			getPlayerData(playerData);
+			/*getPlayerData(playerData);
 			delay(4);
-			clearConsole();
+			clearConsole();*/
 
 			string mapName = selectLevel(playerData);
 			int mapIterator = getAllMapsCount(playerData) + 1;
