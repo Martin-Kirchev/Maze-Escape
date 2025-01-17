@@ -214,9 +214,6 @@ void createMap(string difficulty, unsigned int randomNumber, string size, string
 	fstream mazeFile(directory, ios::in);
 	copyMapToArray(mazeFile, maze);
 
-	const char* pointer = directory.c_str();
-	remove(pointer);
-
 	mazeFile.close();
 }
 
@@ -393,7 +390,6 @@ void deleteOtherMaps(int mapNumber, vector<string>& playerData) {
 
 	while (int playerDataSize = playerData.size() > mapNumber) {
 
-
 		deleteLastVectorElement(playerData);
 	}
 
@@ -402,18 +398,29 @@ void deleteOtherMaps(int mapNumber, vector<string>& playerData) {
 
 string selectComplietedMap(string complietedMaps[10], vector<string>& playerData) {
 
-	cout << "List of completed mazes:" << endl;
-	printListOfMaps(complietedMaps);
-	printNewLine();
-
-	cout << "Type the number of the maze you want to play!" << endl;
 	int mapNumber;
-	cin >> mapNumber;
 
-	while (!mapNumberValidator(mapNumber, complietedMaps)) {
+	while (true) {
 
-		cout << "Number \"" << mapNumber << "\" is invalid!" << endl;
+		cout << "List of completed mazes:" << endl;
+		printListOfMaps(complietedMaps);
+		printNewLine();
+
+		cout << "Type the number of the maze you want to play!" << endl;
 		cin >> mapNumber;
+		mapNumber -= 1;
+
+		if (!mapNumberValidator(mapNumber, complietedMaps)) {
+
+			clearConsole();
+			cout << "Number \"" << mapNumber + 1 << "\" is invalid!" << endl;
+
+			delay(2);
+			clearConsole();
+			continue;
+		}
+
+		break;
 	}
 
 	deleteOtherMaps(mapNumber, playerData);
@@ -434,7 +441,7 @@ string selectLevel(vector<string>& playerData) {
 
 	if (unfinishedMap == "" && complietedMaps[0] == "") {
 
-		return "NO_MAPS_FOUND";
+		return "NO_MAP_FOUND";
 	}
 
 	while (true) {
@@ -495,13 +502,58 @@ string selectLevel(vector<string>& playerData) {
 	return mapName;
 }
 
-void loadMapInfo(string& mapName, string& difficulty, unsigned int& mapNumber, string& size, string& bonusName) {
+void getDifficulty(int& mapIterator, string& mapDifficulty) {
 
-	if (mapName == "NO_MAPS_FOUND") {
+	if (mapIterator == 9) {
 
-		difficulty = "normal";
-		mapNumber = getRandomNumber(6);
+		clearConsole();
+		cout << "Congrats you beat the game!";
+		delay(5);
+		exit(0);
+	}
+
+	if (mapIterator >= 6 && mapDifficulty == "hard") {
+
+		mapDifficulty = "nightmare";
+	}
+	else if (mapIterator >= 3 && mapDifficulty == "normal") {
+
+		mapDifficulty = "hard";
+	}
+	else if (mapIterator < 3 && mapIterator >= 0) {
+
+		mapDifficulty = "normal";
+	}
+
+	mapIterator++;
+
+}
+
+void getSize(string& mapDifficulty, string& size) {
+
+	if (mapDifficulty == "nightmare") {
+
+		size = "20x20";
+	}
+	else if (mapDifficulty == "hard") {
+
+		size = "15x15";
+	}
+	else if (mapDifficulty == "normal") {
+
 		size = "12x15";
+	}
+}
+
+
+void loadMapInfo(string& mapName, string& difficulty, unsigned int& mapNumber, 
+	string& size, string& bonusName, int& mapIterator) {
+
+	if (mapName == "NO_MAP_FOUND") {
+
+		getDifficulty(mapIterator, difficulty);
+		mapNumber = getRandomNumber(6);
+		getSize(difficulty, size);
 
 		string delimiter = "-";
 		mapName = difficulty + delimiter + to_string(mapNumber) + delimiter + size;
@@ -741,7 +793,7 @@ string checkForGameEnd(unsigned int& lives, unsigned int& mapRows, unsigned int&
 
 	if (command == "EXIT LEVEL") {
 
-		return "EXIT LEVEL";
+		return "EXIT_LEVEL";
 	}
 
 	if (command == "EXIT GAME") {
@@ -852,7 +904,7 @@ void updateUncompletePlayerData(unsigned int& lives, unsigned int& coins, unsign
 
 		mapName = mapName + '-' + playerName;
 	}
-	
+
 	playerData.push_back(mapName);
 }
 
@@ -864,7 +916,7 @@ void updateCompletePlayerData(unsigned int& lives, unsigned int& coins, unsigned
 
 	if (array[3] != "") {
 
-		mapName = array[0] + array[1] + array[2];
+		mapName = array[0] + '-' + array[1] + '-' + array[2];
 	}
 
 	for (size_t i = 0; i < playerData.size(); i++)
@@ -918,23 +970,8 @@ void loadPlayerStats(unsigned int& lives, unsigned int& coins, unsigned int& key
 	keys = stoi(lineData[1]);
 }
 
-void getDifficulty(int mapIterator, string& mapDifficulty) {
-
-	if (mapIterator > 9 && mapDifficulty == "nightmare") {
-
-
-	}
-	else if (mapIterator >= 6 && mapDifficulty == "hard") {
-
-		mapDifficulty = "nightmare";
-	}
-	else if (mapIterator >= 3 && mapDifficulty == "normal") {
-
-		mapDifficulty = "hard";
-	}
-}
-
-void createUncompleteMap(unsigned int playerRow, unsigned int playerCol, unsigned int mapRow, unsigned int mapCol, char maze[20][20], string mapName) {
+void createUncompleteMap(unsigned int playerRow, unsigned int playerCol,
+	unsigned int mapRow, unsigned int mapCol, char maze[20][20], string mapName) {
 
 	fstream mapFile("D:\\Workspace\\Maze-Escape\\Maze-Escape\\Maps\\" + mapName + ".txt", ios::out);
 
@@ -957,12 +994,35 @@ void createUncompleteMap(unsigned int playerRow, unsigned int playerCol, unsigne
 	mapFile.close();
 }
 
+int getAllMapsCount(vector<string>& playerData) {
+
+	boolean canCount = false;
+	int counter = 0;
+
+	for (string line : playerData) {
+
+		if (line == "Unfinished Map:") {
+
+			return counter;
+
+		}
+		else if (canCount) {
+
+			counter++;
+
+		}
+		else if (line == "Completed Maps:") {
+
+			canCount = true;
+		}
+	}
+}
+
 void MazeEscape() {
 
 	while (true) {
 
 		boolean mustIterate1 = true;
-		int mapIterator = 1;
 
 		string playerName = startPlayerSystem();
 		clearConsole();
@@ -972,7 +1032,6 @@ void MazeEscape() {
 
 		vector<string> playerData;
 		readPlayerData(playerName, playerData);
-		string mapName = selectLevel(playerData);
 
 		clearConsole();
 
@@ -980,6 +1039,8 @@ void MazeEscape() {
 
 			boolean mustIterate2 = true;
 
+			string mapName = selectLevel(playerData);
+			int mapIterator = getAllMapsCount(playerData);
 			clearConsole();
 
 			const int maxRow = 20;
@@ -991,10 +1052,10 @@ void MazeEscape() {
 			string mapSize;
 			string bonusName;
 
-			loadMapInfo(mapName, mapDifficulty, mapNumber, mapSize, bonusName);
-			createMap(mapDifficulty, mapNumber, mapSize, bonusName, maze);
-
 			while (mustIterate2) {
+
+				loadMapInfo(mapName, mapDifficulty, mapNumber, mapSize, bonusName, mapIterator);
+				createMap(mapDifficulty, mapNumber, mapSize, bonusName, maze);
 
 				string cordinates[10];
 				loadPlayerStats(lives, coins, keys, playerData);
@@ -1024,16 +1085,15 @@ void MazeEscape() {
 
 						updateCompletePlayerData(lives, coins, keys, mapName, playerData);
 						addDataToPlayerProfile(playerName, playerData);
-						mapIterator++;
 						clearConsole();
 
-						mustIterate2 = false;
+						mapName = "NO_MAP_FOUND";
 						break;
 					}
 					else if (mapStatus == "NO_LIVES") {
 
+						clearConsole();
 						break;
-
 					}
 					else if (mapStatus == "LOG_OUT") {
 
@@ -1046,6 +1106,21 @@ void MazeEscape() {
 						mustIterate2 = false;
 						break;
 					}
+					else if (mapStatus == "EXIT_LEVEL") {
+
+						updateUncompletePlayerData(lives, coins, keys, mapName, playerData, playerName);
+						createUncompleteMap(playerRow, playerCol, mapRow, mapCol, maze, mapName);
+						addDataToPlayerProfile(playerName, playerData);
+						clearConsole();
+
+						mustIterate2 = false;
+						break;
+					}
+					else if (mapStatus == "EXIT_GAME") {
+
+						clearConsole();
+						return;
+					}
 
 					delay(slow_seconds);
 					clearConsole();
@@ -1057,13 +1132,6 @@ void MazeEscape() {
 
 int main()
 {
-
-	//string tr = "MK";
-	//fstream playerFile("D:\\Workspace\\Maze-Escape\\Maze-Escape\\Players\\" + tr + ".txt", ios::in);
-
-	//getline(playerFile, tr);
-	//cout << tr;
-
 	MazeEscape();
 }
 

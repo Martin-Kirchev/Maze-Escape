@@ -1,6 +1,7 @@
-Lives:5
-Coins:6
+Lives:4
+Coins:7
 Keys:0
 Completed Maps:
-normal-3-12x15-TEST
+normal-3-12x15
+normal-5-12x15
 Unfinished Map:
