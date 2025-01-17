@@ -68,7 +68,6 @@ void toUpper(string& word) {
 
 	for (size_t i = 0; i < wordLenght; i++)
 	{
-
 		char currentLetter = (char)word.at(i);
 		upperWord += toupper(currentLetter);
 	}
@@ -173,7 +172,7 @@ void printMaze(unsigned int playerRow, unsigned int playerColumn, unsigned int m
 
 			if (row == playerRow && colm == playerColumn) {
 
-				cout << "!";
+				cout << "@";
 				continue;
 			}
 
@@ -184,14 +183,15 @@ void printMaze(unsigned int playerRow, unsigned int playerColumn, unsigned int m
 	}
 }
 
-string getMapDirectory(string difficulty, unsigned int number, string size) {
+string getMapDirectory(string difficulty, unsigned int number, string size, string bonusName) {
 
 	string directory = "D:\\Workspace\\Maze-Escape\\Maze-Escape\\Maps\\";
 
 	string delimiter = "-";
 	string fileType = ".txt";
+	string bonus = (bonusName == "") ? "" : delimiter + bonusName;
 
-	directory = directory + difficulty + delimiter + to_string(number) + delimiter + size + fileType;
+	directory = directory + difficulty + delimiter + to_string(number) + delimiter + size + bonus + fileType;
 
 	return directory;
 }
@@ -207,10 +207,15 @@ void copyMapToArray(fstream& mazeFile, char maze[20][20]) {
 	}
 }
 
-void createMap(string difficulty, unsigned int randomNumber, string size, char maze[20][20]) {
+void createMap(string difficulty, unsigned int randomNumber, string size, string bonusName, char maze[20][20]) {
 
-	fstream mazeFile(getMapDirectory(difficulty, randomNumber, size), ios::in);
+	string directory = getMapDirectory(difficulty, randomNumber, size, bonusName);
+
+	fstream mazeFile(directory, ios::in);
 	copyMapToArray(mazeFile, maze);
+
+	const char* pointer = directory.c_str();
+	remove(pointer);
 
 	mazeFile.close();
 }
@@ -429,7 +434,7 @@ string selectLevel(vector<string>& playerData) {
 
 	if (unfinishedMap == "" && complietedMaps[0] == "") {
 
-		return "NO_MAP_FOUND";
+		return "NO_MAPS_FOUND";
 	}
 
 	while (true) {
@@ -464,6 +469,7 @@ string selectLevel(vector<string>& playerData) {
 
 			mapName = unfinishedMap;
 			deleteLastVectorElement(playerData);
+			break;
 
 		}
 		else {
@@ -478,6 +484,7 @@ string selectLevel(vector<string>& playerData) {
 			}
 
 			mapName = selectComplietedMap(complietedMaps, playerData);
+			break;
 		}
 	}
 
@@ -488,9 +495,9 @@ string selectLevel(vector<string>& playerData) {
 	return mapName;
 }
 
-void loadMapInfo(string& mapName, string& difficulty, unsigned int& mapNumber, string& size) {
+void loadMapInfo(string& mapName, string& difficulty, unsigned int& mapNumber, string& size, string& bonusName) {
 
-	if (mapName == "NO_MAP_FOUND") {
+	if (mapName == "NO_MAPS_FOUND") {
 
 		difficulty = "normal";
 		mapNumber = getRandomNumber(6);
@@ -507,6 +514,7 @@ void loadMapInfo(string& mapName, string& difficulty, unsigned int& mapNumber, s
 		difficulty = mapComponents[0];
 		mapNumber = stoi(mapComponents[1]);
 		size = mapComponents[2];
+		bonusName = mapComponents[3];
 	}
 }
 
@@ -615,39 +623,42 @@ void moveDown(unsigned int& playerRow, unsigned int& playerCol) {
 	playerRow++;
 }
 
-boolean menuComandValidator(string command) {
+boolean menuComandValidator(string comand) {
 
-	return (command == "LOG OUT") || (command == "EXIT LEVEL") || (command == "EXIT GAME");
+	return (comand == "LOG OUT") || (comand == "EXIT LEVEL") || (comand == "EXIT GAME");
 }
 
-void goToMenu() {
+void goToMenu(string& command, int playerRow, unsigned int playerCol, char maze[20][20]) {
 
 	cout << "Type on of the following commands:" << endl;
 	cout << "Log out/Exit level/Exit game" << endl;
 
-	string command;
-	cin >> command;
-	toUpper(command);
+	string comand1;
+	string comand2;
+	cin >> comand1 >> comand2;
 
-	while (!menuComandValidator(command)) {
+	string menuComand = comand1 + " " + comand2;
+	toUpper(menuComand);
 
-		cout << "Menu command \"" << command << "\" is invalid!" << endl;
-		cin >> command;
-		toUpper(command);
+	while (!menuComandValidator(menuComand)) {
+
+		cout << "Menu command \"" << menuComand << "\" is invalid! (Log out/Exit level/Exit game)" << endl;
+		cin >> comand1 >> comand2;
+		string menuComand = comand1 + " " + comand2;
+		toUpper(menuComand);
+		clearConsole();
 	}
 
-	if (command == "LOG OUT") {
+	if ((menuComand == "LOG OUT") || (menuComand == "EXIT LEVEL")) {
 
+		if (maze[playerRow][playerCol] == '%') {
 
-
+			cout << "You can't save while standing on a teleport!";
+			return;
+		}
 	}
-	else if (command == "EXIT LEVEL") {
 
-
-	}
-	else {
-
-	}
+	command = menuComand;
 }
 
 void symbolOperations(unsigned int& lives, unsigned int& coins, unsigned int& keys,
@@ -698,9 +709,52 @@ void symbolOperations(unsigned int& lives, unsigned int& coins, unsigned int& ke
 	}
 }
 
+string checkForGameEnd(unsigned int& lives, unsigned int& mapRows, unsigned int& mapCols, char maze[20][20], string& command) {
+
+	if (lives == 0) {
+
+		return "NO_LIVES";
+	}
+
+	int chestCount = 0;
+
+	for (size_t row = 0; row < mapRows; row++)
+	{
+		for (size_t colm = 0; colm < mapCols; colm++)
+		{
+			if (maze[row][colm] == 'X') {
+
+				chestCount++;
+			}
+		}
+	}
+
+	if (chestCount == 0) {
+
+		return "NO_CHEST_EXIST";
+	}
+
+	if (command == "LOG OUT") {
+
+		return "LOG_OUT";
+	}
+
+	if (command == "EXIT LEVEL") {
+
+		return "EXIT LEVEL";
+	}
+
+	if (command == "EXIT GAME") {
+
+		return "EXIT_GAME";
+	}
+
+	return "";
+}
+
 void movePlayer(unsigned int& lives, unsigned int& coins, unsigned int& keys,
 	string& playerName, unsigned int& playerRow, unsigned int& playerCol,
-	unsigned int& mapRow, unsigned int& mapCol, char maze[20][20]) {
+	unsigned int& mapRow, unsigned int& mapCol, char maze[20][20], string& mapStatus) {
 
 	cout << "Type on of the following commands:" << endl;
 	cout << "W/A/S/D/ESC" << endl;
@@ -753,9 +807,10 @@ void movePlayer(unsigned int& lives, unsigned int& coins, unsigned int& keys,
 	}
 	else if (command == "ESC") {
 
-		goToMenu();
+		goToMenu(command, playerRow, playerCol, maze);
 	}
 
+	mapStatus = checkForGameEnd(lives, mapRow, mapCol, maze, command);
 }
 
 void readPlayerData(string playerName, vector<string>& playerData) {
@@ -771,8 +826,46 @@ void readPlayerData(string playerName, vector<string>& playerData) {
 	playerFile.close();
 }
 
-void updatePlayerData(unsigned int& lives, unsigned int& coins, unsigned int& keys,
-	string mapName, vector<string>& playerData) {
+void updateUncompletePlayerData(unsigned int& lives, unsigned int& coins, unsigned int& keys,
+	string& mapName, vector<string>& playerData, string playerName) {
+
+	for (size_t i = 0; i < playerData.size(); i++)
+	{
+		if (i == 0) {
+
+			playerData.at(i) = "Lives:" + to_string(lives);
+		}
+		else if (i == 1) {
+
+			playerData.at(i) = "Coins:" + to_string(coins);
+		}
+		else if (i == 2) {
+
+			playerData.at(i) = "Keys:" + to_string(keys);
+		}
+	}
+
+	string array[10];
+	split(mapName, '-', array);
+
+	if (array[3] == "") {
+
+		mapName = mapName + '-' + playerName;
+	}
+	
+	playerData.push_back(mapName);
+}
+
+void updateCompletePlayerData(unsigned int& lives, unsigned int& coins, unsigned int& keys,
+	string& mapName, vector<string>& playerData) {
+
+	string array[10];
+	split(mapName, '-', array);
+
+	if (array[3] != "") {
+
+		mapName = array[0] + array[1] + array[2];
+	}
 
 	for (size_t i = 0; i < playerData.size(); i++)
 	{
@@ -793,7 +886,7 @@ void updatePlayerData(unsigned int& lives, unsigned int& coins, unsigned int& ke
 		else if (currentData == "Unfinished Map:") {
 
 			playerData.insert(playerData.begin() + i, mapName);
-			i++;
+			return;
 		}
 	}
 }
@@ -825,27 +918,6 @@ void loadPlayerStats(unsigned int& lives, unsigned int& coins, unsigned int& key
 	keys = stoi(lineData[1]);
 }
 
-string checkForGameEnd(unsigned int& lives, unsigned int& mapRows, unsigned int& mapCols, char maze[20][20]) {
-
-	if (lives == 0) {
-
-		return "NO_LIVES";
-	}
-
-	for (size_t row = 0; row < mapRows; row++)
-	{
-		for (size_t colm = 0; colm < mapCols; colm++)
-		{
-			if (maze[row][colm] == 'X') {
-
-				return "CHEST_EXIST";
-			}
-		}
-	}
-
-	return "NO_CHEST_EXIST";
-}
-
 void getDifficulty(int mapIterator, string& mapDifficulty) {
 
 	if (mapIterator > 9 && mapDifficulty == "nightmare") {
@@ -862,28 +934,51 @@ void getDifficulty(int mapIterator, string& mapDifficulty) {
 	}
 }
 
+void createUncompleteMap(unsigned int playerRow, unsigned int playerCol, unsigned int mapRow, unsigned int mapCol, char maze[20][20], string mapName) {
+
+	fstream mapFile("D:\\Workspace\\Maze-Escape\\Maze-Escape\\Maps\\" + mapName + ".txt", ios::out);
+
+	for (size_t i1 = 0; i1 < mapRow; i1++)
+	{
+		for (size_t i2 = 0; i2 < mapCol; i2++)
+		{
+
+			if (i1 == playerRow && i2 == playerCol) {
+
+				mapFile << '@';
+				continue;
+			}
+
+			mapFile << maze[i1][i2];
+		}
+		mapFile << endl;
+	}
+
+	mapFile.close();
+}
+
 void MazeEscape() {
 
 	while (true) {
 
 		boolean mustIterate1 = true;
-		boolean mustIterate2 = true;
-		int mapIterator = 0;
+		int mapIterator = 1;
 
 		string playerName = startPlayerSystem();
+		clearConsole();
 		unsigned int lives = 0;
 		unsigned int coins = 0;
 		unsigned int keys = 0;
 
 		vector<string> playerData;
 		readPlayerData(playerName, playerData);
-		loadPlayerStats(lives, coins, keys, playerData);
+		string mapName = selectLevel(playerData);
 
 		clearConsole();
 
 		while (mustIterate1) {
 
-			string mapName = selectLevel(playerData);
+			boolean mustIterate2 = true;
 
 			clearConsole();
 
@@ -894,15 +989,15 @@ void MazeEscape() {
 			string mapDifficulty;
 			unsigned int mapNumber;
 			string mapSize;
+			string bonusName;
+
+			loadMapInfo(mapName, mapDifficulty, mapNumber, mapSize, bonusName);
+			createMap(mapDifficulty, mapNumber, mapSize, bonusName, maze);
 
 			while (mustIterate2) {
 
-				getDifficulty(mapIterator, mapDifficulty);
-
-				loadMapInfo(mapName, mapDifficulty, mapNumber, mapSize);
-				createMap(mapDifficulty, mapNumber, mapSize, maze);
-
 				string cordinates[10];
+				loadPlayerStats(lives, coins, keys, playerData);
 
 				split(mapSize, 'x', cordinates);
 				unsigned int mapRow = stoi(cordinates[0]);
@@ -911,6 +1006,8 @@ void MazeEscape() {
 				split(findPlayer(mapRow, mapCol, maze), 'x', cordinates);
 				unsigned int playerRow = stoi(cordinates[0]);
 				unsigned int playerCol = stoi(cordinates[1]);
+
+				string mapStatus;
 
 				while (true) {
 
@@ -921,19 +1018,32 @@ void MazeEscape() {
 					printMaze(playerRow, playerCol, mapRow, mapCol, maze);
 					printNewLine();
 
-					movePlayer(lives, coins, keys, playerName, playerRow, playerCol, mapRow, mapCol, maze);
+					movePlayer(lives, coins, keys, playerName, playerRow, playerCol, mapRow, mapCol, maze, mapStatus);
 
+					if (mapStatus == "NO_CHEST_EXIST") {
 
-					if (checkForGameEnd(lives, mapRow, mapCol, maze) == "NO_CHEST_EXIST") {
-
-						updatePlayerData(lives, coins, keys, mapName, playerData);
+						updateCompletePlayerData(lives, coins, keys, mapName, playerData);
 						addDataToPlayerProfile(playerName, playerData);
 						mapIterator++;
 						clearConsole();
+
+						mustIterate2 = false;
 						break;
 					}
-					else if (checkForGameEnd(lives, mapRow, mapCol, maze) == "NO_LIVES") {
+					else if (mapStatus == "NO_LIVES") {
 
+						break;
+
+					}
+					else if (mapStatus == "LOG_OUT") {
+
+						updateUncompletePlayerData(lives, coins, keys, mapName, playerData, playerName);
+						createUncompleteMap(playerRow, playerCol, mapRow, mapCol, maze, mapName);
+						addDataToPlayerProfile(playerName, playerData);
+						clearConsole();
+
+						mustIterate1 = false;
+						mustIterate2 = false;
 						break;
 					}
 
@@ -947,6 +1057,12 @@ void MazeEscape() {
 
 int main()
 {
+
+	//string tr = "MK";
+	//fstream playerFile("D:\\Workspace\\Maze-Escape\\Maze-Escape\\Players\\" + tr + ".txt", ios::in);
+
+	//getline(playerFile, tr);
+	//cout << tr;
 
 	MazeEscape();
 }
