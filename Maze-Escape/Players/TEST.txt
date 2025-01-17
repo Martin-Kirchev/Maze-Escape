@@ -1,7 +1,14 @@
-Lives:4
-Coins:7
+Lives:1
+Coins:18
 Keys:0
 Completed Maps:
 normal-3-12x15
 normal-5-12x15
+normal-6-15x15
+normal-1-15x15
+hard-6-15x15
+hard-3-15x15
+hard-5-15x15
+nightmare-6-20x20
 Unfinished Map:
+nightmare-3-20x20-TEST
