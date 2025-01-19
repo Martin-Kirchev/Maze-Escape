@@ -4,4 +4,6 @@ Keys:430
 Completed Maps:
 normal-3-12x15
 normal-4-12x15
+normal-5-12x15
+normal-2-12x15
 Unfinished Map:

@@ -65,7 +65,7 @@ void toUpper(string& word) {
 
 	for (size_t i = 0; i < wordLength; i++)
 	{
-		char currentLetter = (char) word.at(i);
+		char currentLetter = (char)word.at(i);
 		uppedWord += toupper(currentLetter);
 	}
 
@@ -114,7 +114,7 @@ boolean playerMovementValidator(unsigned int playerRow, unsigned int playerCol, 
 
 boolean menuComandValidator(string comand) {
 
-	return (comand == "LOG OUT") || (comand == "EXIT LEVEL") || (comand == "EXIT GAME");
+	return (comand == "LOG-OUT") || (comand == "EXIT-LEVEL") || (comand == "EXIT-GAME");
 }
 
 void checkPlayerNameLogin(string& playerName) {
@@ -143,10 +143,13 @@ void checkPlayerNameRegistration(string& playerName) {
 
 void getDifficulty(int mapIterator, string& mapDifficulty) {
 
-	if (mapIterator == 10) {
+	if (mapIterator > 10) {
 
 		clearConsole();
-		cout << "Congrats you beat the game!";
+
+		cout << "Congrats you beat the game!" << endl;
+
+
 		delay(5);
 		exit(0);
 	}
@@ -479,6 +482,12 @@ void printPlayerStats(unsigned int lives, unsigned int coins, unsigned int keys,
 	cout << "Keys: " << ((keys == 0) ? "Not Found" : to_string(keys)) << endl;
 }
 
+void printMessage(string moveMessage) {
+
+	cout << "Message: " << endl;
+	cout << moveMessage << endl;
+}
+
 void printMaze(unsigned int playerRow, unsigned int playerColumn, unsigned int mapRows, unsigned int mapColumns, char maze[21][21]) {
 
 	for (size_t row = 0; row < mapRows; row++)
@@ -635,7 +644,7 @@ string selectLevel(vector<string>& playerData) {
 
 		while (!levelSelectorCommandValidator(command)) {
 
-			cout << "Command \"" << command << "\" is invalid!" << endl;
+			cout << "Command \"" << command << "\" is invalid! (Continue/Select)" << endl;
 			cin >> command;
 			toUpper(command);
 			clearConsole();
@@ -679,7 +688,7 @@ string selectLevel(vector<string>& playerData) {
 	return mapName;
 }
 
-void loadMapInfo(string& mapName, string& difficulty, unsigned int& mapNumber, 
+void loadMapInfo(string& mapName, string& difficulty, unsigned int& mapNumber,
 	string& size, string& bonusPlayerName, int mapIterator) {
 
 	if (mapName == "NO_MAP_FOUND") {
@@ -735,7 +744,7 @@ void teleportPlayer(unsigned int& playerRow, unsigned int& playerCol, unsigned i
 
 			while (col < mapCol) {
 
-				if (maze[row][col] == '%' /*&& row != playerRow && col != playerCol*/) {
+				if (maze[row][col] == '%') {
 
 					playerRow = row;
 					playerCol = col;
@@ -755,7 +764,7 @@ void teleportPlayer(unsigned int& playerRow, unsigned int& playerCol, unsigned i
 }
 
 boolean OpenChest(void (*reverseMove)(unsigned int&, unsigned int&), unsigned int& playerRow, unsigned int& playerCol,
-	unsigned int& keys, unsigned int& coins, char maze[21][21]) {
+	unsigned int& keys, unsigned int& coins, char maze[21][21], string& moveMessage) {
 
 	if (keys > 0) {
 
@@ -764,8 +773,7 @@ boolean OpenChest(void (*reverseMove)(unsigned int&, unsigned int&), unsigned in
 		coins += randomNumber;
 		clearSymbol(playerRow, playerCol, maze);
 
-		cout << "Opening chest..." << endl;
-		cout << "+" << randomNumber << " coins" << endl;
+		moveMessage = "You opened a chest!. \n +" + to_string(randomNumber) + " coins";
 		return true;
 
 	}
@@ -773,7 +781,7 @@ boolean OpenChest(void (*reverseMove)(unsigned int&, unsigned int&), unsigned in
 
 		reverseMove(playerRow, playerCol);
 
-		cout << "You don't have any keys!" << endl;
+		moveMessage = "You don't have any keys!";
 		return false;
 	}
 }
@@ -800,26 +808,25 @@ void moveDown(unsigned int& playerRow, unsigned int& playerCol) {
 
 void goToMenu(string& command, int playerRow, unsigned int playerCol, char maze[21][21]) {
 
+	clearConsole();
+
 	cout << "Type on of the following commands:" << endl;
-	cout << "Log out/Exit level/Exit game" << endl;
+	cout << "Log-out/Exit-level/Exit-game" << endl;
 
-	string comand1;
-	string comand2;
-	cin >> comand1 >> comand2;
-
-	string menuComand = comand1 + " " + comand2;
+	string menuComand;
+	cin >> menuComand;
 	toUpper(menuComand);
 
 	while (!menuComandValidator(menuComand)) {
 
-		cout << "Menu command \"" << menuComand << "\" is invalid! (Log out/Exit level/Exit game)" << endl;
-		cin >> comand1 >> comand2;
-		string menuComand = comand1 + " " + comand2;
-		toUpper(menuComand);
 		clearConsole();
+
+		cout << "Menu command \"" << menuComand << "\" is invalid! (Log-out/Exit-level/Exit-game)" << endl;
+		cin >> menuComand;
+		toUpper(menuComand);
 	}
 
-	if ((menuComand == "LOG OUT") || (menuComand == "EXIT LEVEL")) {
+	if ((menuComand == "LOG-OUT") || (menuComand == "EXIT-LEVEL")) {
 
 		if (maze[playerRow][playerCol] == '%') {
 
@@ -834,14 +841,14 @@ void goToMenu(string& command, int playerRow, unsigned int playerCol, char maze[
 void symbolOperations(unsigned int& lives, unsigned int& coins, unsigned int& keys,
 	void (*reverseMove)(unsigned int&, unsigned int&),
 	unsigned int& playerRow, unsigned int& playerCol,
-	unsigned int mapRow, unsigned int mapCol, char maze[21][21]) {
+	unsigned int mapRow, unsigned int mapCol, char maze[21][21],
+	string& moveMessage) {
 
 	char currentSymbol = maze[playerRow][playerCol];
 
 	if (currentSymbol == '#') {
 
-		cout << "You can't go through the wall!" << endl;
-		cout << "-1 live" << endl;
+		moveMessage = "You can't go through the wall! \n -1 live";
 
 		reverseMove(playerRow, playerCol);
 		lives--;
@@ -849,33 +856,31 @@ void symbolOperations(unsigned int& lives, unsigned int& coins, unsigned int& ke
 	}
 	else if (currentSymbol == 'X') {
 
-		OpenChest(reverseMove, playerRow, playerCol, keys, coins, maze);
+		OpenChest(reverseMove, playerRow, playerCol, keys, coins, maze, moveMessage);
 	}
 	else if (currentSymbol == '%') {
 
-		cout << "Teleporting player..." << endl;
+		moveMessage = "You were teleported!";
 
 		teleportPlayer(playerRow, playerCol, mapRow, mapCol, maze);
 	}
 	else if (currentSymbol == 'C') {
 
-		cout << "You found a coin!" << endl;
-		cout << "+1 coin" << endl;
+		moveMessage = "You found a coin! \n +1 coin";
 
 		clearSymbol(playerRow, playerCol, maze);
 		coins++;
 	}
 	else if (currentSymbol == '&') {
 
-		cout << "You found a key!" << endl;
-		cout << "+1 key" << endl;
+		moveMessage = "You found a key! \n +1 key";
 
 		clearSymbol(playerRow, playerCol, maze);
 		keys++;
 	}
 	else {
 
-		cout << "Nothing happend!" << endl;
+		moveMessage = "";
 	}
 }
 
@@ -904,17 +909,17 @@ string checkForGameEnd(unsigned int lives, unsigned int mapRows, unsigned int ma
 		return "NO_CHEST_EXIST";
 	}
 
-	if (command == "LOG OUT") {
+	if (command == "LOG-OUT") {
 
 		return "LOG_OUT";
 	}
 
-	if (command == "EXIT LEVEL") {
+	if (command == "EXIT-LEVEL") {
 
 		return "EXIT_LEVEL";
 	}
 
-	if (command == "EXIT GAME") {
+	if (command == "EXIT-GAME") {
 
 		return "EXIT_GAME";
 	}
@@ -922,9 +927,10 @@ string checkForGameEnd(unsigned int lives, unsigned int mapRows, unsigned int ma
 	return "CONTINUE";
 }
 
-void movePlayer(unsigned int& lives, unsigned int& coins, unsigned int& keys, 
+void movePlayer(unsigned int& lives, unsigned int& coins, unsigned int& keys,
 	unsigned int& playerRow, unsigned int& playerCol,
-	unsigned int mapRow, unsigned int mapCol, char maze[21][21], string& mapStatus) {
+	unsigned int mapRow, unsigned int mapCol, char maze[21][21], string& mapStatus,
+	string& moveMessage) {
 
 	cout << "Type on of the following commands:" << endl;
 	cout << "W/A/S/D/ESC" << endl;
@@ -948,7 +954,7 @@ void movePlayer(unsigned int& lives, unsigned int& coins, unsigned int& keys,
 		if (playerMovementValidator(playerRow - 1, playerCol, mapRow, mapCol)) {
 
 			moveUp(playerRow, playerCol);
-			symbolOperations(lives, coins, keys, &moveDown, playerRow, playerCol, mapRow, mapCol, maze);
+			symbolOperations(lives, coins, keys, &moveDown, playerRow, playerCol, mapRow, mapCol, maze, moveMessage);
 		}
 	}
 	else if (command == "A") {
@@ -956,7 +962,7 @@ void movePlayer(unsigned int& lives, unsigned int& coins, unsigned int& keys,
 		if (playerMovementValidator(playerRow, playerCol - 1, mapRow, mapCol)) {
 
 			moveLeft(playerRow, playerCol);
-			symbolOperations(lives, coins, keys, &moveRight, playerRow, playerCol, mapRow, mapCol, maze);
+			symbolOperations(lives, coins, keys, &moveRight, playerRow, playerCol, mapRow, mapCol, maze, moveMessage);
 		}
 	}
 	else if (command == "S") {
@@ -964,7 +970,7 @@ void movePlayer(unsigned int& lives, unsigned int& coins, unsigned int& keys,
 		if (playerMovementValidator(playerRow + 1, playerCol, mapRow, mapCol)) {
 
 			moveDown(playerRow, playerCol);
-			symbolOperations(lives, coins, keys, &moveUp, playerRow, playerCol, mapRow, mapCol, maze);
+			symbolOperations(lives, coins, keys, &moveUp, playerRow, playerCol, mapRow, mapCol, maze, moveMessage);
 		}
 	}
 	else if (command == "D") {
@@ -972,7 +978,7 @@ void movePlayer(unsigned int& lives, unsigned int& coins, unsigned int& keys,
 		if (playerMovementValidator(playerRow, playerCol + 1, mapRow, mapCol)) {
 
 			moveRight(playerRow, playerCol);
-			symbolOperations(lives, coins, keys, &moveLeft, playerRow, playerCol, mapRow, mapCol, maze);
+			symbolOperations(lives, coins, keys, &moveLeft, playerRow, playerCol, mapRow, mapCol, maze, moveMessage);
 		}
 	}
 	else if (command == "ESC") {
@@ -991,9 +997,9 @@ void MazeEscape() {
 
 		string playerName = startPlayerSystem();
 		clearConsole();
-		unsigned int lives = 0;
-		unsigned int coins = 0;
-		unsigned int keys = 0;
+		unsigned int lives;
+		unsigned int coins;
+		unsigned int keys;
 
 		vector<string> playerData;
 		readPlayerData(playerName, playerData);
@@ -1005,7 +1011,6 @@ void MazeEscape() {
 			boolean whileIterator2 = true;
 
 			string mapName = selectLevel(playerData);
-			int mapIterator = getAllMapsCount(playerData) + 1;
 			clearConsole();
 
 			const int maxRow = 21;
@@ -1018,6 +1023,8 @@ void MazeEscape() {
 			string bonusPlayerName;
 
 			while (whileIterator2) {
+
+				int mapIterator = getAllMapsCount(playerData) + 1;
 
 				loadMapInfo(mapName, mapDifficulty, mapNumber, mapSize, bonusPlayerName, mapIterator);
 				createMap(mapDifficulty, mapNumber, mapSize, bonusPlayerName, maze);
@@ -1034,6 +1041,7 @@ void MazeEscape() {
 				unsigned int playerCol = stoi(cordinates[1]);
 
 				string mapStatus;
+				string moveMessage;
 
 				while (true) {
 
@@ -1041,10 +1049,12 @@ void MazeEscape() {
 					printNewLine();
 					printPlayerStats(lives, coins, keys, playerName);
 					printNewLine();
+					printMessage(moveMessage);
+					printNewLine();
 					printMaze(playerRow, playerCol, mapRow, mapCol, maze);
 					printNewLine();
 
-					movePlayer(lives, coins, keys, playerRow, playerCol, mapRow, mapCol, maze, mapStatus);
+					movePlayer(lives, coins, keys, playerRow, playerCol, mapRow, mapCol, maze, mapStatus, moveMessage);
 
 					if (mapStatus == "NO_CHEST_EXIST") {
 
@@ -1087,7 +1097,6 @@ void MazeEscape() {
 						return;
 					}
 
-					delay(1);
 					clearConsole();
 				}
 			}
